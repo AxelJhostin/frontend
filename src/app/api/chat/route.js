@@ -1,61 +1,50 @@
 import { GoogleGenAI } from "@google/genai";
 import { NextResponse } from "next/server";
 
-// Prompt del Sistema (El mismo que tenías)
 const SYSTEM_PROMPT = `
 Eres un planificador de viajes experto de Ecuador 🇪🇨.
 Tu objetivo es generar itinerarios detallados y estructurados.
 
-INSTRUCCIONES DE FORMATO JSON:
-Siempre responde con un objeto JSON.
-Analiza la intención del usuario:
+INSTRUCCIONES DE FORMATO JSON (STRICT):
+Siempre responde con un objeto JSON válido. NO uses Markdown.
 
-CASO 1: El usuario pide una recomendación, viaje, itinerario o "qué hacer".
-Genera una estructura de CRONOGRAMA:
+CASO 1: El usuario pide recomendación/itinerario.
 {
   "type": "itinerary",
-  "title": "Título corto del viaje",
-  "region": "Costa / Sierra / Oriente / Galápagos",
-  "duration": "Duración estimada",
-  "budget": "Presupuesto estimado (USD)",
+  "title": "Título corto",
+  "region": "Región",
+  "duration": "Duración",
+  "budget": "Presupuesto",
   "schedule": [
-    { "day": "Día 1", "time": "Mañana", "activity": "Nombre actividad", "description": "Breve detalle." },
-    { "day": "Día 1", "time": "Tarde", "activity": "Nombre actividad", "description": "Breve detalle." },
-    { "day": "Día 2", "time": "Mañana", "activity": "Nombre actividad", "description": "Breve detalle." }
+    { "day": "Día 1", "time": "Mañana", "activity": "Actividad", "description": "Detalle breve" },
+    { "day": "Día 1", "time": "Tarde", "activity": "Actividad", "description": "Detalle breve" }
   ]
 }
 
-CASO 2: El usuario saluda o pregunta algo general.
+CASO 2: Saludo o general.
 {
   "type": "text",
-  "content": "Respuesta conversacional amable."
+  "content": "Respuesta conversacional."
 }
-
-NO USES MARKDOWN. SOLO JSON PURO.
 `;
 
 export async function POST(req) {
   try {
-    // Leemos el mensaje del cuerpo de la petición
     const { message } = await req.json();
-
     const apiKey = process.env.GEMINI_API_KEY;
+
     if (!apiKey) {
-      return NextResponse.json({ type: "text", content: "Error: No API Key configured" }, { status: 500 });
+      return NextResponse.json({ type: "text", content: "Error: Falta la API Key en Vercel" }, { status: 500 });
     }
 
-    const ai = new GoogleGenAI({ apiKey: apiKey });
-
+    const ai = new GoogleGenAI({ apiKey });
     const chat = ai.chats.create({
       model: "gemini-2.5-flash",
       config: { responseMimeType: "application/json" },
-      history: [
-        { role: "user", parts: [{ text: SYSTEM_PROMPT }] },
-      ],
+      history: [{ role: "user", parts: [{ text: SYSTEM_PROMPT }] }],
     });
 
     const result = await chat.sendMessage({ message });
-    
     let jsonResponse;
     try {
       jsonResponse = JSON.parse(result.text);
@@ -66,10 +55,7 @@ export async function POST(req) {
     return NextResponse.json(jsonResponse);
 
   } catch (error) {
-    console.error("Error en API Next.js:", error);
-    return NextResponse.json(
-      { type: "text", content: "Lo siento, hubo un error técnico en el servidor." },
-      { status: 500 }
-    );
+    console.error("Error API:", error);
+    return NextResponse.json({ type: "text", content: "Error técnico en el servidor." }, { status: 500 });
   }
 }
