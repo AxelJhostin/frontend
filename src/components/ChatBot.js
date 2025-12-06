@@ -41,7 +41,7 @@ export default function ChatBot({ isOpen, onClose }) {
 
     try {
       // 2. Enviamos al backend
-      const response = await fetch("http://localhost:4000/chat", {
+      const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: userMessage.content }),
